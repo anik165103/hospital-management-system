@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Healthcare Appointment System — FCFS</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bitter:wght@300;400;600;700&family=Karla:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #1a5f4f;
+      --primary-light: #2d8b73;
+      --primary-dark: #0f3d32;
+      --accent: #e87d4f;
+      --accent-light: #ffa87d;
+      --bg-main: #faf8f5;
+      --bg-card: #ffffff;
+      --text-primary: #1a2e28;
+      --text-secondary: #5a6d66;
+      --border: #d4e0db;
+      --shadow: rgba(26, 95, 79, 0.08);
+      --shadow-hover: rgba(26, 95, 79, 0.15);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Karla', sans-serif;
+      background: var(--bg-main);
+      color: var(--text-primary);
+      line-height: 1.6;
+    }
+
+    /* ── Header ── */
+    .header {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+      color: white;
+      padding: 2rem 0;
+      position: relative;
+      overflow: hidden;
+    }
+    .header::before {
+      content: '';
+      position: absolute;
+      top: -50%; right: -20%;
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+      border-radius: 50%;
+      animation: float 20s infinite ease-in-out;
+    }
+    @keyframes float {
+      0%,100% { transform: translate(0,0) scale(1); }
+      50%      { transform: translate(-30px,-30px) scale(1.1); }
+    }
+
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 2rem; position: relative; z-index: 1; }
+
+    .header-content {
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 1.5rem;
+    }
+
+    h1 { font-family: 'Bitter', serif; font-size: 2.5rem; font-weight: 700; letter-spacing: -0.5px; }
+
+    .nav-buttons { display: flex; gap: 1rem; }
+
+    .btn {
+      padding: 0.75rem 1.5rem;
+      border: none; border-radius: 8px;
+      font-family: 'Karla', sans-serif; font-size: 1rem; font-weight: 600;
+      cursor: pointer; transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+    }
+    .btn-primary { background: var(--accent); color: white; box-shadow: 0 4px 12px rgba(232,125,79,0.3); }
+    .btn-primary:hover { background: #d66a3e; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(232,125,79,0.4); }
+    .btn-secondary { background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3); }
+    .btn-secondary:hover { background: rgba(255,255,255,0.25); }
+    .btn-sm {
+      padding: 0.4rem 0.9rem; font-size: 0.85rem;
+      border: none; border-radius: 6px;
+      font-family: 'Karla', sans-serif; font-weight: 600;
+      cursor: pointer; transition: all 0.2s ease;
+    }
+    .btn-advance { background: #d4edda; color: #155724; }
+    .btn-advance:hover { background: #c3e6cb; }
+    .btn-cancel  { background: #f8d7da; color: #721c24; }
+    .btn-cancel:hover  { background: #f5c6cb; }
+
+    /* ── Main / Stats ── */
+    .main-content { padding: 3rem 0; }
+
+    .stats-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.5rem; margin-bottom: 3rem;
+      animation: slideUp 0.6s ease-out;
+    }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .stat-card {
+      background: var(--bg-card); padding: 2rem; border-radius: 16px;
+      box-shadow: 0 2px 12px var(--shadow); border-left: 4px solid var(--primary);
+      transition: all 0.3s ease; animation: slideUp 0.6s ease-out backwards;
+    }
+    .stat-card:nth-child(1){animation-delay:.1s}
+    .stat-card:nth-child(2){animation-delay:.2s}
+    .stat-card:nth-child(3){animation-delay:.3s}
+    .stat-card:nth-child(4){animation-delay:.4s}
+    .stat-card:hover { transform: translateY(-5px); box-shadow: 0 8px 24px var(--shadow-hover); }
+    .stat-label { font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 1px; }
+    .stat-value { font-family: 'Bitter', serif; font-size: 2.5rem; font-weight: 700; color: var(--primary); }
+
+    /* ── Content grid ── */
+    .content-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 2rem; }
+
+    .section {
+      background: var(--bg-card); padding: 2.5rem; border-radius: 16px;
+      box-shadow: 0 2px 12px var(--shadow); animation: slideUp 0.8s ease-out backwards;
+    }
+    .section:nth-child(1){animation-delay:.5s}
+    .section:nth-child(2){animation-delay:.6s}
+
+    .section-title {
+      font-family: 'Bitter', serif; font-size: 1.8rem; margin-bottom: 1.5rem;
+      color: var(--primary-dark); position: relative; padding-bottom: 0.75rem;
+    }
+    .section-title::after {
+      content: ''; position: absolute; bottom: 0; left: 0;
+      width: 60px; height: 3px;
+      background: linear-gradient(90deg, var(--accent), var(--accent-light));
+      border-radius: 2px;
+    }
+
+    /* ── Form ── */
+    .form-group { margin-bottom: 1.5rem; }
+    label { display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-primary); }
+    input, select, textarea {
+      width: 100%; padding: 0.875rem 1rem;
+      border: 2px solid var(--border); border-radius: 8px;
+      font-family: 'Karla', sans-serif; font-size: 1rem;
+      transition: all 0.3s ease; background: var(--bg-main);
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none; border-color: var(--primary); background: white;
+      box-shadow: 0 0 0 4px rgba(26,95,79,0.1);
+    }
+    textarea { resize: vertical; min-height: 100px; }
+
+    /* ── FCFS info banner ── */
+    .fcfs-info {
+      background: #e8f4f1; border-left: 4px solid var(--primary);
+      padding: 1rem 1.25rem; border-radius: 8px; margin-bottom: 1.5rem;
+      font-size: 0.9rem; color: var(--primary-dark); line-height: 1.5;
+    }
+    .fcfs-info strong { font-weight: 700; }
+
+    /* ── Alerts ── */
+    .alert {
+      padding: 0.875rem 1.25rem; border-radius: 8px;
+      font-size: 0.95rem; margin-bottom: 1.25rem; display: none;
+    }
+    .alert-error   { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+    .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+    .alert-warning { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
+
+    /* ── Appointment list ── */
+    .appointment-list { max-height: 600px; overflow-y: auto; }
+
+    .filter-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; }
+    .filter-btn {
+      padding: 0.3rem 0.85rem; font-size: 0.8rem; border-radius: 20px;
+      border: 1px solid var(--border); background: transparent;
+      cursor: pointer; color: var(--text-secondary); font-family: 'Karla', sans-serif;
+      transition: all 0.2s;
+    }
+    .filter-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+    .appointment-item {
+      background: var(--bg-main); padding: 1.25rem; border-radius: 12px;
+      margin-bottom: 1rem; border-left: 4px solid var(--accent);
+      transition: all 0.3s ease;
+    }
+    .appointment-item.slot-holder  { border-left-color: #1D9E75; }
+    .appointment-item.slot-waiting { border-left-color: #EF9F27; }
+    .appointment-item:hover { background: white; transform: translateX(4px); box-shadow: 0 4px 12px var(--shadow); }
+
+    .appointment-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.4rem; }
+    .patient-name { font-weight: 700; font-size: 1.05rem; color: var(--primary-dark); }
+    .appointment-time { font-size: 0.85rem; color: var(--text-secondary); }
+
+    .appointment-tags { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: 0.5rem; }
+    .queue-badge { display: inline-block; background: #eef3f1; color: var(--text-secondary); font-size: 0.78rem; padding: 2px 10px; border-radius: 20px; }
+    .slot-badge { display: inline-block; font-size: 0.78rem; padding: 2px 10px; border-radius: 20px; font-weight: 600; }
+    .slot-badge.holder  { background: #d4edda; color: #155724; }
+    .slot-badge.waiting { background: #fff3cd; color: #856404; }
+
+    .appointment-details { font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.75rem; line-height: 1.6; }
+
+    .appointment-footer { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+    .status-badge { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.85rem; font-weight: 600; }
+    .status-pending   { background: #fff3cd; color: #856404; }
+    .status-confirmed { background: #d4edda; color: #155724; }
+    .status-completed { background: #d1ecf1; color: #0c5460; }
+    .status-waiting   { background: #fff3cd; color: #856404; }
+    .btn-group { display: flex; gap: 6px; }
+
+    .empty-state { text-align: center; padding: 3rem 1rem; color: var(--text-secondary); }
+    .empty-state-icon { font-size: 3.5rem; margin-bottom: 0.75rem; opacity: 0.3; }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed; top: 2rem; right: 2rem;
+      background: var(--primary-dark); color: white;
+      padding: 1rem 1.5rem; border-radius: 8px;
+      box-shadow: 0 4px 20px var(--shadow-hover);
+      transform: translateX(400px); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+      z-index: 1000; max-width: 360px; font-size: 0.95rem; line-height: 1.4;
+    }
+    .toast.show { transform: translateX(0); }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: var(--bg-main); }
+    ::-webkit-scrollbar-thumb { background: var(--primary-light); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+
+    @media (max-width: 768px) {
+      h1 { font-size: 2rem; }
+      .content-grid { grid-template-columns: 1fr; }
+      .nav-buttons { width: 100%; }
+      .btn { flex: 1; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <div class="container">
+    <div class="header-content">
+      <h1>🏥 Healthcare Center</h1>
+      <div class="nav-buttons">
+        <button class="btn btn-secondary" onclick="scrollToQueue()">View Queue</button>
+        <button class="btn btn-primary" onclick="scrollToBooking()">New Booking</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="main-content">
+  <div class="container">
+
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Total Appointments</div>
+        <div class="stat-value" id="totalAppointments">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Today's Appointments</div>
+        <div class="stat-value" id="todayAppointments">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Confirmed</div>
+        <div class="stat-value" id="confirmedAppointments">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Pending / Waiting</div>
+        <div class="stat-value" id="pendingAppointments">0</div>
+      </div>
+    </div>
+
+    <div class="content-grid">
+
+      <!-- Booking Form -->
+      <section class="section" id="bookingSection">
+        <h2 class="section-title">Book New Appointment</h2>
+
+       
+        <div class="alert alert-error"   id="alertError"></div>
+        <div class="alert alert-success" id="alertSuccess"></div>
+        <div class="alert alert-warning" id="alertWarning"></div>
+
+        <form id="appointmentForm">
+          <div class="form-group">
+            <label for="patientName">Patient Name *</label>
+            <input type="text" id="patientName" required placeholder="Enter full name">
+          </div>
+          <div class="form-group">
+            <label for="phone">Phone Number *</label>
+            <input type="tel" id="phone" required placeholder="+91 98765 43210">
+          </div>
+          <div class="form-group">
+            <label for="email">Email (Optional)</label>
+            <input type="email" id="email" placeholder="example@email.com">
+          </div>
+          <div class="form-group">
+            <label for="doctor">Select Doctor *</label>
+            <select id="doctor" required>
+              <option value="">Choose a doctor</option>
+              <option>Dr. Ahmed Hossain — Cardiologist</option>
+              <option>Dr. Fatima Rahman — Pediatrician</option>
+              <option>Dr. Karim Khan — Orthopedic Surgeon</option>
+              <option>Dr. Nasrin Akter — Gynecologist</option>
+              <option>Dr. Rahat Ali — General Physician</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="date">Date *</label>
+            <input type="date" id="date" required>
+          </div>
+          <div class="form-group">
+            <label for="time">Time Slot *</label>
+            <select id="time" required>
+              <option value="">Select time</option>
+              <option>09:00 AM</option>
+              <option>10:00 AM</option>
+              <option>11:00 AM</option>
+              <option>12:00 PM</option>
+              <option>02:00 PM</option>
+              <option>03:00 PM</option>
+              <option>04:00 PM</option>
+              <option>05:00 PM</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="reason">Reason for Visit</label>
+            <textarea id="reason" placeholder="Brief description of your health concern..."></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary" style="width:100%">Confirm Appointment</button>
+        </form>
+      </section>
+
+      <!-- Queue / Appointment List -->
+      <section class="section" id="queueSection">
+        <h2 class="section-title">Appointment Queue</h2>
+
+        <div class="filter-row">
+          <button class="filter-btn active" onclick="setFilter('all',this)">All</button>
+          <button class="filter-btn" onclick="setFilter('pending',this)">Pending</button>
+          <button class="filter-btn" onclick="setFilter('confirmed',this)">Confirmed</button>
+          <button class="filter-btn" onclick="setFilter('waiting',this)">Waiting</button>
+          <button class="filter-btn" onclick="setFilter('completed',this)">Completed</button>
+        </div>
+
+        <div class="appointment-list" id="appointmentList">
+          <div class="empty-state">
+            <div class="empty-state-icon">📅</div>
+            <p>No appointments yet</p>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ── State ──────────────────────────────────────────────────────────────────
+  let appointments = JSON.parse(localStorage.getItem('hc_appointments_fcfs')) || [];
+  let queueCounter = parseInt(localStorage.getItem('hc_queue_counter') || '1');
+  let activeFilter = 'all';
+
+  const TODAY = new Date().toISOString().split('T')[0];
+  document.getElementById('date').min = TODAY;
+  document.getElementById('date').value = TODAY;
+
+  // ── Persistence ────────────────────────────────────────────────────────────
+  function saveData() {
+    localStorage.setItem('hc_appointments_fcfs', JSON.stringify(appointments));
+    localStorage.setItem('hc_queue_counter', String(queueCounter));
+  }
+
+  // ── FCFS helpers ───────────────────────────────────────────────────────────
+  /** Returns active peers for a slot, sorted by queueNo (FCFS order). */
+  function getSlotPeers(doctor, date, time, excludeId) {
+    return appointments
+      .filter(a => a.doctor === doctor && a.date === date && a.time === time
+                && a.id !== excludeId && a.status !== 'cancelled')
+      .sort((a, b) => a.queueNo - b.queueNo);
+  }
+
+  /**
+   * After a cancellation, re-evaluate who holds the slot.
+   * The peer with the lowest queueNo gets promoted to 'pending';
+   * all others remain 'waiting'.
+   */
+  function rebalanceSlot(doctor, date, time) {
+    const peers = getSlotPeers(doctor, date, time, null);
+    peers.forEach((a, idx) => {
+      if (idx === 0 && a.status === 'waiting') {
+        a.status = 'pending';
+      } else if (idx > 0 && a.status !== 'completed') {
+        a.status = 'waiting';
+      }
+    });
+  }
+
+  // ── Form submit ────────────────────────────────────────────────────────────
+  document.getElementById('appointmentForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    hideAlerts();
+
+    const patientName = document.getElementById('patientName').value.trim();
+    const phone       = document.getElementById('phone').value.trim();
+    const email       = document.getElementById('email').value.trim();
+    const doctor      = document.getElementById('doctor').value;
+    const date        = document.getElementById('date').value;
+    const time        = document.getElementById('time').value;
+    const reason      = document.getElementById('reason').value.trim();
+
+    if (!patientName || !phone || !doctor || !date || !time) {
+      showAlert('error', 'Please fill in all required fields.');
+      return;
+    }
+
+    const peers      = getSlotPeers(doctor, date, time, null);
+    const isConflict = peers.length > 0;
+
+    const apt = {
+      id:          Date.now(),
+      queueNo:     queueCounter++,
+      patientName, phone, email,
+      doctor, date, time, reason,
+      status:      isConflict ? 'waiting' : 'pending',
+      createdAt:   new Date().toISOString()
+    };
+
+    appointments.push(apt);
+    saveData();
+    this.reset();
+    document.getElementById('date').min   = TODAY;
+    document.getElementById('date').value = TODAY;
+
+    if (isConflict) {
+      const holder = peers[0];
+      showAlert('warning',
+        `Slot already held by ${holder.patientName} (Queue #${holder.queueNo}). ` +
+        `${patientName} added as Queue #${apt.queueNo} — waiting. ` +
+        `They will be auto-promoted if Queue #${holder.queueNo} cancels.`
+      );
+    } else {
+      showAlert('success',
+        `✓ Appointment confirmed! Queue #${apt.queueNo} — ${patientName} ` +
+        `with ${doctor} on ${formatDate(date)} at ${time}.`
+      );
+    }
+
+    updateStats();
+    renderQueue();
+  });
+
+  // ── Status advancement ─────────────────────────────────────────────────────
+  function advanceStatus(id) {
+    const a = appointments.find(x => x.id === id);
+    if (!a || a.status === 'waiting' || a.status === 'completed') return;
+    const flow = ['pending', 'confirmed', 'completed'];
+    const idx  = flow.indexOf(a.status);
+    if (idx < flow.length - 1) {
+      a.status = flow[idx + 1];
+      saveData(); updateStats(); renderQueue();
+      showToast(`Status updated to "${a.status}" for ${a.patientName}.`);
+    }
+  }
+
+  // ── Cancel ─────────────────────────────────────────────────────────────────
+  function cancelAppointment(id) {
+    const a = appointments.find(x => x.id === id);
+    if (!a) return;
+    const { doctor, date, time } = a;
+    a.status = 'cancelled';
+
+    rebalanceSlot(doctor, date, time);
+    saveData(); updateStats(); renderQueue();
+
+    const promoted = appointments.find(x =>
+      x.doctor === doctor && x.date === date && x.time === time &&
+      x.status === 'pending' && x.id !== id
+    );
+    if (promoted) {
+      showToast(
+        `Queue #${a.queueNo} cancelled. ` +
+        `Queue #${promoted.queueNo} (${promoted.patientName}) promoted to pending.`
+      );
+    } else {
+      showToast(`Appointment for ${a.patientName} cancelled.`);
+    }
+  }
+
+  // ── Filter ─────────────────────────────────────────────────────────────────
+  function setFilter(f, btn) {
+    activeFilter = f;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderQueue();
+  }
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+  function updateStats() {
+    const active = appointments.filter(a => a.status !== 'cancelled');
+    document.getElementById('totalAppointments').textContent    = active.length;
+    document.getElementById('todayAppointments').textContent    = active.filter(a => a.date === TODAY).length;
+    document.getElementById('confirmedAppointments').textContent = active.filter(a => a.status === 'confirmed').length;
+    document.getElementById('pendingAppointments').textContent  =
+      active.filter(a => a.status === 'pending' || a.status === 'waiting').length;
+  }
+
+  function renderQueue() {
+    const listEl = document.getElementById('appointmentList');
+
+    const sorted = [...appointments].sort((a, b) => a.queueNo - b.queueNo);
+    const visible = sorted.filter(a => {
+      if (activeFilter === 'all') return a.status !== 'cancelled';
+      return a.status === activeFilter;
+    });
+
+    if (visible.length === 0) {
+      listEl.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-icon">📅</div>
+          <p>No appointments to show</p>
+        </div>`;
+      return;
+    }
+
+    listEl.innerHTML = visible.map(a => {
+      const peers        = getSlotPeers(a.doctor, a.date, a.time, null);
+      const isHolder     = peers.length === 0 || peers[0].id === a.id;
+      const slotPos      = peers.findIndex(p => p.id === a.id) + 1;
+      const totalInSlot  = peers.length;
+      const hasConflict  = totalInSlot > 1;
+
+      let slotTag = '';
+      if (hasConflict) {
+        slotTag = isHolder
+          ? `<span class="slot-badge holder">Slot holder</span>`
+          : `<span class="slot-badge waiting">Waiting ${slotPos} of ${totalInSlot}</span>`;
+      }
+
+      const cardClass = hasConflict
+        ? (isHolder ? 'appointment-item slot-holder' : 'appointment-item slot-waiting')
+        : 'appointment-item';
+
+      const statusText  = { pending:'Pending', confirmed:'Confirmed', completed:'Completed', waiting:'Waiting' }[a.status];
+      const nextLabel   = { pending:'Mark Confirmed', confirmed:'Mark Completed' }[a.status];
+
+      return `
+        <div class="${cardClass}">
+          <div class="appointment-header">
+            <span class="patient-name">${a.patientName}</span>
+            <span class="appointment-time">${a.time}</span>
+          </div>
+          <div class="appointment-tags">
+            <span class="queue-badge">Queue #${a.queueNo}</span>
+            ${slotTag}
+          </div>
+          <div class="appointment-details">
+            <strong>Doctor:</strong> ${a.doctor}<br>
+            <strong>Date:</strong> ${formatDate(a.date)}<br>
+            <strong>Phone:</strong> ${a.phone}
+            ${a.email  ? `<br><strong>Email:</strong> ${a.email}` : ''}
+            ${a.reason ? `<br><strong>Reason:</strong> ${a.reason}` : ''}
+          </div>
+          <div class="appointment-footer">
+            <span class="status-badge status-${a.status}">${statusText}</span>
+            <div class="btn-group">
+              ${a.status === 'waiting'
+                ? `<span style="font-size:0.82rem;color:var(--text-secondary)">Awaiting slot</span>`
+                : nextLabel
+                  ? `<button class="btn-sm btn-advance" onclick="advanceStatus(${a.id})">${nextLabel}</button>`
+                  : ''}
+              <button class="btn-sm btn-cancel" onclick="cancelAppointment(${a.id})">Cancel</button>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  // ── Alerts / Toast ─────────────────────────────────────────────────────────
+  function showAlert(type, msg) {
+    const map = { error: 'alertError', success: 'alertSuccess', warning: 'alertWarning' };
+    const el  = document.getElementById(map[type]);
+    el.textContent = msg;
+    el.style.display = 'block';
+    if (type !== 'error') setTimeout(() => el.style.display = 'none', 7000);
+  }
+  function hideAlerts() {
+    ['alertError','alertSuccess','alertWarning'].forEach(id =>
+      document.getElementById(id).style.display = 'none'
+    );
+  }
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 4000);
+  }
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  function formatDate(d) {
+    return new Date(d + 'T00:00:00').toLocaleDateString('en-IN', {
+      weekday:'short', day:'numeric', month:'short', year:'numeric'
+    });
+  }
+  function scrollToBooking() { document.getElementById('bookingSection').scrollIntoView({ behavior:'smooth' }); }
+  function scrollToQueue()   { document.getElementById('queueSection').scrollIntoView({ behavior:'smooth' }); }
+
+  // ── Init ───────────────────────────────────────────────────────────────────
+  updateStats();
+  renderQueue();
+</script>
+</body>
+</html>
